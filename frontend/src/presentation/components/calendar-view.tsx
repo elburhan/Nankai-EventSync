@@ -52,7 +52,7 @@ export const CalendarView = ({ events, baseDate }: CalendarViewProps) => {
 
   return (
     <section className="rounded-[2rem] border border-white/60 bg-white/85 p-6 shadow-panel backdrop-blur sm:p-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div>
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-brand-700">
             {t('calendar.viewTitle')}
@@ -61,7 +61,6 @@ export const CalendarView = ({ events, baseDate }: CalendarViewProps) => {
             {resolvedBaseDate.toLocaleString([], { month: 'long', year: 'numeric' })}
           </h2>
         </div>
-        <p className="text-sm text-slate-600">{t('calendar.viewDescription')}</p>
       </div>
 
       <div className="mt-6 grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">

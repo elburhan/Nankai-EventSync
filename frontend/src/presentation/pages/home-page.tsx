@@ -27,6 +27,9 @@ const sectionIcons: Record<EventSectionKey, string> = {
   Others: 'O',
 };
 
+const HOME_RECOMMENDATION_VISIBLE_LIMIT = 3;
+const HOME_RECOMMENDATION_FETCH_LIMIT = HOME_RECOMMENDATION_VISIBLE_LIMIT + 1;
+
 export const HomePage = () => {
   const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
@@ -93,7 +96,7 @@ export const HomePage = () => {
       setRecommendationError(null);
 
       try {
-        const feed = await eventService.getHomeFeed(4);
+        const feed = await eventService.getHomeFeed(HOME_RECOMMENDATION_FETCH_LIMIT);
 
         if (!isMounted) {
           return;
@@ -139,6 +142,8 @@ export const HomePage = () => {
   const hasActiveFilters = searchTerm.trim().length > 0 || sectionFilter !== 'all';
   const counterValue = hasActiveFilters ? filteredEvents.length : events.length;
   const counterLabel = hasActiveFilters ? t('home.matchingEvents') : t('home.upcomingEvents');
+  const visibleRecommendedEvents = recommendedEvents.slice(0, HOME_RECOMMENDATION_VISIBLE_LIMIT);
+  const hasMoreRecommendedEvents = recommendedEvents.length > visibleRecommendedEvents.length;
 
   const sections = useMemo(() => {
     return sectionOrder.map((sectionKey) => ({
@@ -303,8 +308,20 @@ export const HomePage = () => {
               message={recommendationError}
             />
           ) : null}
-          {!isRecommendationsLoading && !recommendationError && recommendedEvents.length > 0 ? (
-            <RecommendedEventList items={recommendedEvents} />
+          {!isRecommendationsLoading && !recommendationError && visibleRecommendedEvents.length > 0 ? (
+            <>
+              <RecommendedEventList items={visibleRecommendedEvents} />
+              {hasMoreRecommendedEvents ? (
+                <div className="flex justify-center">
+                  <Link
+                    to={APP_ROUTES.EVENTS}
+                    className="inline-flex rounded-full border border-ink/10 bg-white px-5 py-2.5 text-sm font-semibold text-ink shadow-sm transition hover:border-gold-300 hover:text-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-400"
+                  >
+                    {t('home.browseAll')}
+                  </Link>
+                </div>
+              ) : null}
+            </>
           ) : null}
           {!isRecommendationsLoading && !recommendationError && recommendedEvents.length === 0 ? (
             <EmptyState
