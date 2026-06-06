@@ -29,7 +29,7 @@ export const ChatComposer = ({ canChat, isSending, onSend }: ChatComposerProps) 
         onChange={(event) => setValue(event.target.value)}
         disabled={!canChat || isSending}
         rows={4}
-        placeholder={canChat ? 'Share updates with the room.' : 'RSVP first to unlock attendee chat.'}
+        placeholder={canChat ? 'Share updates with the room.' : 'RSVP to join the conversation.'}
         className="w-full rounded-[1.5rem] border border-slate-200 bg-white px-4 py-4 text-sm outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-100 disabled:cursor-not-allowed disabled:bg-slate-50"
       />
       <button

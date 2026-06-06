@@ -51,7 +51,7 @@ export class EventRoomService {
 
     if (!participantState.canChat) {
       throw new AppError(
-        'You must RSVP or be the organizer to send messages in this event room.',
+        'You must RSVP, host this event, or be an admin to send messages in this event room.',
         HTTP_STATUS.FORBIDDEN,
       );
     }
@@ -66,12 +66,20 @@ export class EventRoomService {
       organizerId ??
       (await this.resolveOrganizerId(eventId));
 
-    const isOrganizerOwner = resolvedOrganizerId === user.id;
+    const hasPrivilegedChatAccess = user.role === 'admin' || resolvedOrganizerId === user.id;
+
+    if (hasPrivilegedChatAccess) {
+      return {
+        isAttending: false,
+        canChat: true,
+      };
+    }
+
     const hasActiveRsvp = await this.rsvpRepository.hasGoingRsvp(eventId, user.id);
 
     return {
       isAttending: hasActiveRsvp,
-      canChat: isOrganizerOwner || hasActiveRsvp,
+      canChat: hasActiveRsvp,
     };
   }
 

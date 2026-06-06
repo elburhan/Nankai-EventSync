@@ -1,17 +1,19 @@
 interface RsvpActionCardProps {
-  isOrganizer: boolean;
+  isPrivilegedUser: boolean;
+  isAdmin: boolean;
   isAttending: boolean;
   isBusy: boolean;
   onToggleRsvp: () => Promise<void>;
 }
 
 export const RsvpActionCard = ({
-  isOrganizer,
+  isPrivilegedUser,
+  isAdmin,
   isAttending,
   isBusy,
   onToggleRsvp,
 }: RsvpActionCardProps) => {
-  if (isOrganizer) {
+  if (isPrivilegedUser) {
     return (
       <div className="rounded-4xl border border-brand-100 bg-gradient-to-br from-brand-50 to-white p-6 shadow-panel">
         <div className="flex items-center gap-3">
@@ -31,12 +33,16 @@ export const RsvpActionCard = ({
             </svg>
           </div>
           <p className="text-xs font-semibold uppercase tracking-widest text-brand-700">
-            Organizer Access
+            {isAdmin ? 'Admin Access' : 'Organizer Access'}
           </p>
         </div>
-        <h2 className="mt-4 text-lg font-bold text-ink">You are hosting this event</h2>
+        <h2 className="mt-4 text-lg font-bold text-ink">
+          {isAdmin ? 'You can moderate this event room' : 'You are hosting this event'}
+        </h2>
         <p className="mt-1.5 text-sm leading-relaxed text-slate-500">
-          You already have full access to the event room and can communicate with attendees live.
+          {isAdmin
+            ? 'You can communicate in this event room without creating an RSVP.'
+            : 'You already have full access to the event room and can communicate with attendees live.'}
         </p>
       </div>
     );
