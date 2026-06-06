@@ -302,8 +302,6 @@ export const translationResources = {
       },
       calendar: {
         viewTitle: 'Calendar View',
-        viewDescription:
-          'A quick month snapshot for your course demo and report screenshots.',
         weekdays: {
           mon: 'Mon',
           tue: 'Tue',
@@ -658,8 +656,6 @@ export const translationResources = {
       },
       calendar: {
         viewTitle: '日历视图',
-        viewDescription:
-          '为你的课程演示和报告截图提供一个简洁的月度快照。',
         weekdays: {
           mon: '周一',
           tue: '周二',
