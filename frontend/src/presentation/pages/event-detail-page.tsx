@@ -42,6 +42,25 @@ const mergeMessages = (currentMessages: EventMessage[], incomingMessage: EventMe
   });
 };
 
+interface CanSendEventMessagesOptions {
+  currentUserId?: string;
+  currentUserRole?: string;
+  organizerId?: string;
+  roomCanChat?: boolean;
+}
+
+const canSendEventMessages = ({
+  currentUserId,
+  currentUserRole,
+  organizerId,
+  roomCanChat,
+}: CanSendEventMessagesOptions): boolean => {
+  if (currentUserRole === 'admin') return true;
+  if (currentUserId && organizerId && currentUserId === organizerId) return true;
+
+  return roomCanChat === true;
+};
+
 export const EventDetailPage = () => {
   const { t } = useTranslation();
   const { eventId } = useParams<{ eventId: string }>();
@@ -66,7 +85,14 @@ export const EventDetailPage = () => {
   const isAdmin = user?.role === 'admin';
   const canDeleteEvent = Boolean(isOwnerOrganizer || isAdmin);
 
-  const canChat = roomState?.canChat ?? isOwnerOrganizer;
+  const canSendMessages = useMemo(() => {
+    return canSendEventMessages({
+      currentUserId: user?.id,
+      currentUserRole: user?.role,
+      organizerId: event?.organizer.id,
+      roomCanChat: roomState?.canChat,
+    });
+  }, [event?.organizer.id, roomState?.canChat, user?.id, user?.role]);
   const isAttending = roomState?.isAttending ?? false;
 
   const currentStatus = event?.status ?? 'draft';
@@ -149,6 +175,19 @@ export const EventDetailPage = () => {
       cleanupSocketError();
     };
   }, [eventId, token]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+
+    console.debug('[EventSync] Event chat permission', {
+      currentUserId: user?.id ?? null,
+      currentUserRole: user?.role ?? null,
+      eventOrganizerId: event?.organizer.id ?? null,
+      isAttending,
+      roomCanChat: roomState?.canChat ?? null,
+      canSendMessages,
+    });
+  }, [canSendMessages, event?.organizer.id, isAttending, roomState?.canChat, user?.id, user?.role]);
 
   const handleToggleRsvp = async () => {
     if (!eventId || !event || isOwnerOrganizer || isAdmin) return;
@@ -457,7 +496,7 @@ export const EventDetailPage = () => {
         <ChatPanel
           currentUserId={user?.id ?? null}
           messages={roomState?.messages ?? []}
-          canChat={Boolean(canChat)}
+          canChat={canSendMessages}
           isSending={isSendingMessage}
           onSend={handleSendMessage}
         />
@@ -497,7 +536,8 @@ export const EventDetailPage = () => {
 
           <AttendeeCounter isLive={Boolean(roomState)} />
           <RsvpActionCard
-            isOrganizer={Boolean(isOwnerOrganizer || isAdmin)}
+            isPrivilegedUser={Boolean(isOwnerOrganizer || isAdmin)}
+            isAdmin={Boolean(isAdmin)}
             isAttending={Boolean(isAttending)}
             isBusy={isRsvpSaving}
             onToggleRsvp={handleToggleRsvp}

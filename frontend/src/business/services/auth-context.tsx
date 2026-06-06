@@ -34,12 +34,26 @@ interface AuthContextValue {
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
-const buildFallbackUser = (token: string): AuthUser => {
+const decodeJwtPayload = (token: string): { sub?: string; role?: AuthUser['role'] } | null => {
   const payloadPart = token.split('.')[1];
 
-  try {
-    const decoded = JSON.parse(window.atob(payloadPart)) as { sub?: string; role?: AuthUser['role'] };
+  if (!payloadPart) return null;
 
+  try {
+    const normalizedPayload = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+    const paddingLength = (4 - (normalizedPayload.length % 4)) % 4;
+    const paddedPayload = normalizedPayload.padEnd(normalizedPayload.length + paddingLength, '=');
+
+    return JSON.parse(window.atob(paddedPayload)) as { sub?: string; role?: AuthUser['role'] };
+  } catch {
+    return null;
+  }
+};
+
+const buildFallbackUser = (token: string): AuthUser => {
+  const decoded = decodeJwtPayload(token);
+
+  if (decoded) {
     return {
       id: decoded.sub ?? '',
       fullName: 'Authenticated User',
@@ -49,17 +63,17 @@ const buildFallbackUser = (token: string): AuthUser => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-  } catch {
-    return {
-      id: '',
-      fullName: 'Authenticated User',
-      email: 'session@eventsync.local',
-      role: 'student',
-      emailVerified: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
   }
+
+  return {
+    id: '',
+    fullName: 'Authenticated User',
+    email: 'session@eventsync.local',
+    role: 'student',
+    emailVerified: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
 };
 
 export const AuthProvider = ({ children }: PropsWithChildren) => {
