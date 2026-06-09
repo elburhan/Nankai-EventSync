@@ -23,7 +23,7 @@ eventRouter.get('/calendar-events', optionalAuthentication, validateRequest(cale
   return eventController.getCalendarEvents(request, response);
 }));
 
-eventRouter.get('/events/:eventId', validateRequest(eventIdParamsSchema), asyncHandler((request, response) => {
+eventRouter.get('/events/:eventId', optionalAuthentication, validateRequest(eventIdParamsSchema), asyncHandler((request, response) => {
   return eventController.getEventById(request, response);
 }));
 

@@ -18,6 +18,9 @@ export interface Event {
   attendeeCount: number;
   tags: string[];
   status: EventStatus;
+  visibility: 'public' | 'private' | 'internal';
+  isPrivate?: boolean;
+  isInternal?: boolean;
   organizerId: ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -95,6 +98,23 @@ const eventSchema = new Schema<Event>(
       enum: EVENT_STATUSES,
       default: 'draft',
       required: true,
+      index: true,
+    },
+    visibility: {
+      type: String,
+      enum: ['public', 'private', 'internal'],
+      default: 'public',
+      required: true,
+      index: true,
+    },
+    isPrivate: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    isInternal: {
+      type: Boolean,
+      default: false,
       index: true,
     },
     organizerId: {

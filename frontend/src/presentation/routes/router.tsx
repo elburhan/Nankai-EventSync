@@ -37,6 +37,10 @@ export const router = createBrowserRouter([
         element: <EmailVerificationPage />,
       },
       {
+        path: APP_ROUTES.EVENT_DETAIL,
+        element: <EventDetailPage />,
+      },
+      {
         element: <ProtectedRoute />,
         children: [
           {
@@ -46,10 +50,6 @@ export const router = createBrowserRouter([
           {
             path: APP_ROUTES.EVENTS,
             element: <EventsPage />,
-          },
-          {
-            path: APP_ROUTES.EVENT_DETAIL,
-            element: <EventDetailPage />,
           },
           {
             element: <OrganizerRoute />,

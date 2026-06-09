@@ -117,7 +117,7 @@ export const translationResources = {
           'AI-assisted picks based on your RSVP history, favorite categories, and tags.',
         dashboardHeading: 'Your next campus picks',
         dashboardDescription:
-          'These recommendations are generated with Llama via Groq, with a safe local fallback if AI is unavailable.',
+          'Personalized event suggestions based on your RSVP history, favorite categories, and tags.',
         loadingTitle: 'Loading recommendations',
         loadingMessage:
           'Finding events that match your recent interests.',

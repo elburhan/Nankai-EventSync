@@ -256,9 +256,9 @@ List events with optional filtering and pagination.
 
 #### `GET /events/:eventId`
 
-Get a single event by its ID.
+Get a single event by its ID. Public visitors and students can only access events that are published, upcoming, and public. Owning organizers and admins can access restricted event details for management/moderation.
 
-**Auth required:** No
+**Auth required:** Optional
 
 **Path parameters:**
 
@@ -268,7 +268,7 @@ Get a single event by its ID.
 
 **Response 200:** Single event object (same shape as items in list response).
 
-**Errors:** `400` (invalid ID format), `404` (not found)
+**Errors:** `400` (invalid ID format), `404` (not found or not visible to the current user)
 
 ---
 
@@ -358,7 +358,7 @@ Delete an event and all associated RSVPs and messages.
 
 #### `POST /events/:eventId/rsvp`
 
-RSVP to an event (mark yourself as attending).
+RSVP to an event (mark yourself as attending). The backend only accepts RSVPs for published upcoming events with remaining capacity.
 
 **Auth required:** Yes (any role)
 
@@ -375,7 +375,7 @@ RSVP to an event (mark yourself as attending).
 }
 ```
 
-**Errors:** `400` (already RSVPd), `401`, `404`
+**Errors:** `400` (event not open for RSVP), `401`, `404`, `409` (event is full)
 
 ---
 

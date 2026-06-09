@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import { EventService } from '../../business/services/event.service';
 import { HTTP_STATUS } from '../../shared/constants/http-status';
 import { AppError } from '../../shared/errors/app-error';
+import type { CalendarEventQueryDto, EventQueryDto } from '../../business/dto/event-query.dto';
 
 const eventService = new EventService();
 
@@ -22,7 +23,10 @@ export class EventController {
   }
 
   public async getEvents(request: Request, response: Response): Promise<void> {
-    const result = await eventService.getEventsForUser(request.authenticatedUser, request.query as never);
+    const result = await eventService.getEventsForUser(
+      request.authenticatedUser,
+      request.query as unknown as EventQueryDto,
+    );
 
     response.status(HTTP_STATUS.OK).json({
       success: true,
@@ -32,7 +36,10 @@ export class EventController {
   }
 
   public async getCalendarEvents(request: Request, response: Response): Promise<void> {
-    const events = await eventService.getCalendarEvents(request.authenticatedUser, request.query as never);
+    const events = await eventService.getCalendarEvents(
+      request.authenticatedUser,
+      request.query as unknown as CalendarEventQueryDto,
+    );
 
     response.status(HTTP_STATUS.OK).json({
       success: true,
@@ -41,7 +48,10 @@ export class EventController {
   }
 
   public async getEventById(request: Request, response: Response): Promise<void> {
-    const event = await eventService.getEventById(request.params.eventId);
+    const event = await eventService.getEventByIdForUser(
+      request.authenticatedUser,
+      request.params.eventId,
+    );
 
     response.status(HTTP_STATUS.OK).json({
       success: true,

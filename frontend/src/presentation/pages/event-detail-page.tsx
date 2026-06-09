@@ -42,6 +42,25 @@ const mergeMessages = (currentMessages: EventMessage[], incomingMessage: EventMe
   });
 };
 
+interface CanSendEventMessagesOptions {
+  currentUserId?: string;
+  currentUserRole?: string;
+  organizerId?: string;
+  roomCanChat?: boolean;
+}
+
+const canSendEventMessages = ({
+  currentUserId,
+  currentUserRole,
+  organizerId,
+  roomCanChat,
+}: CanSendEventMessagesOptions): boolean => {
+  if (currentUserRole === 'admin') return true;
+  if (currentUserId && organizerId && currentUserId === organizerId) return true;
+
+  return roomCanChat === true;
+};
+
 export const EventDetailPage = () => {
   const { t } = useTranslation();
   const { eventId } = useParams<{ eventId: string }>();
@@ -66,14 +85,21 @@ export const EventDetailPage = () => {
   const isAdmin = user?.role === 'admin';
   const canDeleteEvent = Boolean(isOwnerOrganizer || isAdmin);
 
-  const canChat = roomState?.canChat ?? isOwnerOrganizer;
+  const canSendMessages = useMemo(() => {
+    return canSendEventMessages({
+      currentUserId: user?.id,
+      currentUserRole: user?.role,
+      organizerId: event?.organizer.id,
+      roomCanChat: roomState?.canChat,
+    });
+  }, [event?.organizer.id, roomState?.canChat, user?.id, user?.role]);
   const isAttending = roomState?.isAttending ?? false;
 
   const currentStatus = event?.status ?? 'draft';
   const normalizedCategory = event ? normalizeEventCategory(event.category) : null;
 
   useEffect(() => {
-    if (!eventId || !token) return;
+    if (!eventId) return;
 
     let isMounted = true;
     let cleanupJoined: () => void = () => undefined;
@@ -91,6 +117,12 @@ export const EventDetailPage = () => {
         if (!isMounted) return;
 
         setEvent(eventDetail);
+
+        if (!token) {
+          setRoomState(null);
+          return;
+        }
+
         eventRoomService.connect(token);
 
         cleanupJoined = eventRoomService.onEventJoined((payload) => {
@@ -142,7 +174,9 @@ export const EventDetailPage = () => {
 
     return () => {
       isMounted = false;
-      eventRoomService.leaveRoom(eventId);
+      if (token) {
+        eventRoomService.leaveRoom(eventId);
+      }
       cleanupJoined();
       cleanupRsvp();
       cleanupMessage();
@@ -151,7 +185,7 @@ export const EventDetailPage = () => {
   }, [eventId, token]);
 
   const handleToggleRsvp = async () => {
-    if (!eventId || !event || isOwnerOrganizer || isAdmin) return;
+    if (!eventId || !event || !user || isOwnerOrganizer || isAdmin) return;
 
     const nextIsAttending = !isAttending;
     const previousAttendeeCount = event.attendeeCount;
@@ -454,13 +488,29 @@ export const EventDetailPage = () => {
 
       {/* ─── Live room + sidebar ──────────────────────────────── */}
       <div className="grid gap-6 xl:grid-cols-[0.72fr_0.28fr]">
-        <ChatPanel
-          currentUserId={user?.id ?? null}
-          messages={roomState?.messages ?? []}
-          canChat={Boolean(canChat)}
-          isSending={isSendingMessage}
-          onSend={handleSendMessage}
-        />
+        {user ? (
+          <ChatPanel
+            currentUserId={user.id}
+            messages={roomState?.messages ?? []}
+            canChat={canSendMessages}
+            isSending={isSendingMessage}
+            onSend={handleSendMessage}
+          />
+        ) : (
+          <section className="rounded-[2rem] border border-white/60 bg-white/85 p-6 shadow-panel backdrop-blur">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-brand-700">Event room</p>
+            <h2 className="mt-2 text-2xl font-bold text-ink">Sign in to join the conversation</h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+              Public event details are available now. Sign in to RSVP, join attendee chat, and receive live room updates.
+            </p>
+            <Link
+              to={APP_ROUTES.LOGIN}
+              className="mt-5 inline-flex rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-400"
+            >
+              Sign in to participate
+            </Link>
+          </section>
+        )}
 
         <div className="space-y-5">
           {/* Status control (organizer only) */}
@@ -496,12 +546,14 @@ export const EventDetailPage = () => {
           ) : null}
 
           <AttendeeCounter isLive={Boolean(roomState)} />
-          <RsvpActionCard
-            isOrganizer={Boolean(isOwnerOrganizer || isAdmin)}
-            isAttending={Boolean(isAttending)}
-            isBusy={isRsvpSaving}
-            onToggleRsvp={handleToggleRsvp}
-          />
+          {user ? (
+            <RsvpActionCard
+              isOrganizer={Boolean(isOwnerOrganizer || isAdmin)}
+              isAttending={Boolean(isAttending)}
+              isBusy={isRsvpSaving}
+              onToggleRsvp={handleToggleRsvp}
+            />
+          ) : null}
         </div>
       </div>
 

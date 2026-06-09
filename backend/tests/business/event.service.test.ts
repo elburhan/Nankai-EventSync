@@ -33,6 +33,25 @@ describe('EventService', () => {
     role: 'student',
   };
 
+  const buildEvent = (overrides: Record<string, unknown> = {}) => ({
+    _id: { toString: () => 'event1' },
+    title: 'Campus Event',
+    description: 'A useful campus event description.',
+    category: 'Academic',
+    location: 'Main Hall',
+    timezone: 'Asia/Shanghai',
+    startAt: new Date('2099-01-01T10:00:00.000Z'),
+    endAt: new Date('2099-01-01T12:00:00.000Z'),
+    attendeeCount: 0,
+    tags: [],
+    status: 'published',
+    visibility: 'public',
+    organizerId: 'user1',
+    createdAt: new Date('2026-01-01T10:00:00.000Z'),
+    updatedAt: new Date('2026-01-01T10:00:00.000Z'),
+    ...overrides,
+  });
+
   beforeEach(() => {
     vi.resetAllMocks();
 
@@ -54,6 +73,57 @@ describe('EventService', () => {
     } as unknown as vi.Mocked<MessageRepository>;
 
     eventService = new EventService(mockEventRepository, mockRsvpRepository, mockMessageRepository);
+  });
+
+  describe('getEventByIdForUser', () => {
+    it('allows guests to view published upcoming public events', async () => {
+      mockEventRepository.findById.mockResolvedValue(buildEvent() as never);
+
+      const result = await eventService.getEventByIdForUser(undefined, 'event1');
+
+      expect(result.id).toBe('event1');
+      expect(result.status).toBe('published');
+    });
+
+    it('hides draft events from students', async () => {
+      mockEventRepository.findById.mockResolvedValue(buildEvent({ status: 'draft' }) as never);
+
+      await expect(
+        eventService.getEventByIdForUser(mockStudent, 'event1'),
+      ).rejects.toThrow(new AppError('Event not found.', HTTP_STATUS.NOT_FOUND));
+    });
+
+    it('hides past published events from guests', async () => {
+      mockEventRepository.findById.mockResolvedValue(buildEvent({
+        startAt: new Date('2020-01-01T10:00:00.000Z'),
+      }) as never);
+
+      await expect(
+        eventService.getEventByIdForUser(undefined, 'event1'),
+      ).rejects.toThrow(new AppError('Event not found.', HTTP_STATUS.NOT_FOUND));
+    });
+
+    it('allows the owning organizer to view their draft event', async () => {
+      mockEventRepository.findById.mockResolvedValue(buildEvent({ status: 'draft' }) as never);
+
+      const result = await eventService.getEventByIdForUser(mockOrganizer, 'event1');
+
+      expect(result.id).toBe('event1');
+      expect(result.status).toBe('draft');
+    });
+
+    it('allows admin to view any event detail', async () => {
+      mockEventRepository.findById.mockResolvedValue(buildEvent({
+        status: 'cancelled',
+        visibility: 'private',
+        organizerId: 'otherUser',
+      }) as never);
+
+      const result = await eventService.getEventByIdForUser(mockAdmin, 'event1');
+
+      expect(result.id).toBe('event1');
+      expect(result.status).toBe('cancelled');
+    });
   });
 
   describe('updateEvent', () => {
