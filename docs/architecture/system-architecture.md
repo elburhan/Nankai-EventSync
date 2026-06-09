@@ -2,39 +2,53 @@
 
 ## Mermaid Diagram
 ```mermaid
-flowchart LR
-    Student[Student User]
-    Organizer[Organizer User]
+flowchart TB
+    Guest[Guest / Public Visitor]
+    Student[Student]
+    Organizer[Organizer]
+    Admin[Admin]
 
-    subgraph Frontend[Frontend - React + Vite]
-      UI[Presentation Layer\nPages + Components + Routes]
-      FBL[Business Layer\nAuth/Event Services\nRoom Orchestration]
-      FDA[Data Access Layer\nRepositories]
-      FIN[Integration Layer\nAxios Client + Socket Client + Token/Image Storage]
+    subgraph Frontend[Frontend - React 18 + Vite + Tailwind]
+      Routes[Presentation Layer\nRoutes, Pages, Components]
+      FServices[Business Layer\nAuth, Event, Room Services]
+      FRepos[Data Access Layer\nAxios + Socket Repositories]
+      FIntegrations[Integration Layer\nHTTP Client, Socket Client, Token Storage, Image Storage]
     end
 
-    subgraph Backend[Backend - Express + Socket.io]
-      BPRE[Presentation Layer\nRoutes + Controllers + Middleware]
-      BBL[Business Layer\nAuth/Event/RSVP/Message Services]
-      BDA[Data Access Layer\nMongoose Models + Repositories]
-      BIN[Integration Layer\nMongoDB + JWT + Cloudinary + Socket Server]
+    subgraph Backend[Backend - Express + TypeScript + Socket.io]
+      Api[Presentation Layer\nRoutes, Controllers, Middleware, Zod Validation]
+      Services[Business Layer\nAuth, Event, RSVP, Message, Recommendation Services]
+      Guards[Domain Guards\nVisibility Rules + Ownership + RSVP Capacity]
+      Repos[Data Access Layer\nMongoose Repositories]
+      Models[(MongoDB Models\nUser, Event, RSVP, Message)]
+      Infra[Integration Layer\nJWT, SMTP, Cloudinary, Socket Server, Groq Client]
     end
 
-    DB[(MongoDB Atlas)]
-    CDN[(Cloudinary)]
+    Mongo[(MongoDB Atlas)]
+    Cloudinary[(Cloudinary Posters)]
+    SMTP[(SMTP Email Verification)]
+    Groq[(Optional Groq / Llama Ranking)]
 
-    Student --> UI
-    Organizer --> UI
+    Guest --> Routes
+    Student --> Routes
+    Organizer --> Routes
+    Admin --> Routes
 
-    UI --> FBL --> FDA --> FIN
-    FIN -->|REST /api| BPRE --> BBL --> BDA --> DB
-    FIN -->|Socket.io JWT Handshake| BIN
-    BIN --> BBL
-    BBL --> BIN
-    BBL -->|Poster Upload/Delete| CDN
+    Routes --> FServices --> FRepos --> FIntegrations
+    FIntegrations -->|REST /api| Api --> Services
+    FIntegrations -->|Socket.io JWT handshake| Infra
 
-    BIN -->|event:rsvp-updated| FIN
-    BIN -->|message:created| FIN
+    Services --> Guards
+    Guards -->|public detail: published + upcoming + public| Repos
+    Guards -->|owner/admin may view/manage restricted events| Repos
+    Guards -->|RSVP: published + upcoming + capacity available| Repos
+    Services -->|recommendation profile + fallback| Groq
+    Services --> Repos --> Models --> Mongo
+    Services -->|poster upload/delete| Cloudinary
+    Services -->|OTP email| SMTP
+
+    Infra -->|join event rooms, send messages| Services
+    Infra -->|event:rsvp-updated + message:created| FIntegrations
 ```
 
 ## Layer Summary
@@ -45,7 +59,14 @@ flowchart LR
 
 ## Real-Time Flow
 1. A user opens `/events/:eventId` in the frontend.
-2. The frontend business service ensures a JWT-authenticated Socket.io connection exists.
-3. The client joins room `event:{eventId}`.
-4. RSVP changes persist through the REST API, then the backend service emits `event:rsvp-updated`.
-5. Chat messages flow through the socket server, are persisted by the message service, and broadcast as `message:created`.
+2. Public visitors can view only event details that pass the backend visibility rule: published, upcoming, and public.
+3. Authenticated users establish a JWT-authenticated Socket.io connection and join room `event:{eventId}`.
+4. RSVP changes must pass backend guards for published/upcoming events and available capacity, then the backend emits `event:rsvp-updated`.
+5. Chat messages flow through the socket server, are permission-checked, persisted by the message service, and broadcast as `message:created`.
+
+## Recommendation Flow
+1. The home feed builds a preference profile from a user's RSVP history.
+2. Eligible candidate events are restricted to published, upcoming, public events.
+3. If `GROQ_API_KEY` is configured, Groq/Llama ranks candidates and returns concise reasons.
+4. If the AI call is unavailable or returns no usable results, EventSync falls back to deterministic category/tag/date scoring.
+5. Cold-start users receive a chronological fallback feed so the homepage remains useful even without history.

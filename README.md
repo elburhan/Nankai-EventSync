@@ -14,8 +14,9 @@ EventSync is a production-ready full-stack campus event platform for Nankai Univ
 - Admin event deletion rights across all events
 - Cloudinary-backed poster upload
 - RSVP flows with live synchronization
+- RSVP guards for event status, timing, and capacity
 - Socket.io event-room messaging
-- Public landing page with category sections and search/filter
+- Public landing page and safe public event details with category sections and search/filter
 - Light bilingual support for English and Simplified Chinese
 - Self-account deletion with explicit cascading cleanup
 - AI-powered personalized recommendations using Groq + Llama with a local fallback engine
@@ -71,7 +72,7 @@ eventsync/
 - Search and category filtering for public event discovery
 - Login and registration for students and organizers
 - confirm-password validation and email OTP verification during registration
-- Protected dashboard and event detail pages
+- Protected dashboard plus public-safe event detail pages
 - Organizer-owned event CRUD with poster upload and status controls
 - Admin ability to delete any event
 - Admin status moderation actions across all events
@@ -99,6 +100,7 @@ Architecture artifacts:
 - [system-architecture.md](c:\Users\Burhan\Desktop\eventsync\docs\architecture\system-architecture.md)
 - [technical-challenges.md](c:\Users\Burhan\Desktop\eventsync\docs\architecture\technical-challenges.md)
 - [user-manual.md](c:\Users\Burhan\Desktop\eventsync\docs\deployment\user-manual.md)
+- [demo-testing-checklist.md](c:\Users\Burhan\Desktop\eventsync\docs\deployment\demo-testing-checklist.md)
 
 ## Local Setup
 

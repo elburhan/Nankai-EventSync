@@ -226,3 +226,11 @@ Current phase: `Production-ready MVP complete`
 - clarified the public homepage CTA so signed-out users are asked to sign in before opening protected event details
 - moved the visible calendar labels and overflow text into i18n so the calendar stays bilingual and presentation-ready
 - aligned README guidance with Gmail SMTP local development, hidden verification codes on the real UI, and the `E2E_MONGODB_URI` requirement for Playwright
+
+## Latest Final Optimization Pass
+- added backend-scoped public event detail visibility so guests/students can only view published, upcoming, public events while owners/admins retain management visibility
+- hardened RSVP creation so draft, non-published, past, and full-capacity events reject new RSVPs with clear API errors
+- opened the frontend event detail route for safe public viewing while keeping RSVP, chat, and live room participation authenticated
+- centralized backend event category and pagination limit constants to reduce duplicated literals in validators and pagination helpers
+- refreshed architecture/report support docs with a visibility-aware Mermaid diagram, eight final challenges-and-solutions talking points, and a deployment demo checklist
+- expanded backend unit tests for event visibility and RSVP status/date/capacity guards

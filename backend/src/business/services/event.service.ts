@@ -11,6 +11,7 @@ import { buildPaginationMeta, resolvePagination } from '../../shared/utils/pagin
 import { deletePosterAsset, uploadPosterAsset } from '../../integration/storage/cloudinary';
 import type { CalendarEventQueryDto, EventQueryDto } from '../dto/event-query.dto';
 import type { EventResponseDto } from '../dto/event-response.dto';
+import type { EventStatus } from '../../shared/constants/event-status';
 
 interface CreateEventInput {
   title: string;
@@ -42,10 +43,11 @@ interface UpdateEventInput {
 }
 
 interface UpdateEventStatusInput {
-  status: 'draft' | 'published' | 'cancelled' | 'completed';
+  status: EventStatus;
 }
 
 const EVENT_MUTATION_FORBIDDEN_MESSAGE = 'You do not have permission to perform this action.';
+const EVENT_NOT_FOUND_MESSAGE = 'Event not found.';
 
 export class EventService {
   constructor(
@@ -143,7 +145,36 @@ export class EventService {
     const event = await this.eventRepository.findById(eventId);
 
     if (!event) {
-      throw new AppError('Event not found.', HTTP_STATUS.NOT_FOUND);
+      throw new AppError(EVENT_NOT_FOUND_MESSAGE, HTTP_STATUS.NOT_FOUND);
+    }
+
+    return this.mapEvent(event);
+  }
+
+  public async getEventByIdForUser(
+    authenticatedUser: AuthenticatedUser | undefined,
+    eventId: string,
+  ): Promise<EventResponseDto> {
+    const event = await this.eventRepository.findById(eventId);
+
+    if (!event) {
+      throw new AppError(EVENT_NOT_FOUND_MESSAGE, HTTP_STATUS.NOT_FOUND);
+    }
+
+    const organizerId = this.extractOrganizerId(event.organizerId);
+
+    if (
+      !this.canViewEventDetail({
+        authenticatedUser,
+        organizerId,
+        status: event.status,
+        startAt: event.startAt,
+        visibility: event.visibility,
+        isPrivate: event.isPrivate,
+        isInternal: event.isInternal,
+      })
+    ) {
+      throw new AppError(EVENT_NOT_FOUND_MESSAGE, HTTP_STATUS.NOT_FOUND);
     }
 
     return this.mapEvent(event);
@@ -291,6 +322,64 @@ export class EventService {
     throw new AppError(EVENT_MUTATION_FORBIDDEN_MESSAGE, HTTP_STATUS.FORBIDDEN);
   }
 
+  private canViewEventDetail({
+    authenticatedUser,
+    organizerId,
+    status,
+    startAt,
+    visibility,
+    isPrivate,
+    isInternal,
+  }: {
+    authenticatedUser: AuthenticatedUser | undefined;
+    organizerId: string;
+    status: EventStatus;
+    startAt: Date;
+    visibility?: string;
+    isPrivate?: boolean;
+    isInternal?: boolean;
+  }): boolean {
+    if (authenticatedUser?.role === 'admin') {
+      return true;
+    }
+
+    if (authenticatedUser?.role === 'organizer' && authenticatedUser.id === organizerId) {
+      return true;
+    }
+
+    return this.isPublicUpcomingEvent({
+      status,
+      startAt,
+      visibility,
+      isPrivate,
+      isInternal,
+    });
+  }
+
+  private isPublicUpcomingEvent({
+    status,
+    startAt,
+    visibility,
+    isPrivate,
+    isInternal,
+  }: {
+    status: EventStatus;
+    startAt: Date;
+    visibility?: string;
+    isPrivate?: boolean;
+    isInternal?: boolean;
+  }): boolean {
+    const normalizedVisibility = typeof visibility === 'string'
+      ? visibility.toLowerCase()
+      : 'public';
+
+    return status === 'published'
+      && startAt.getTime() >= Date.now()
+      && normalizedVisibility === 'public'
+      && isPrivate !== true
+      && isInternal !== true;
+  }
+
   private buildScopedEventFilters(
     authenticatedUser: AuthenticatedUser | undefined,
     query: Pick<EventQueryDto, 'q' | 'category' | 'status' | 'organizerId' | 'upcoming' | 'from' | 'to'>,
@@ -398,6 +487,9 @@ export class EventService {
     attendeeCount: number;
     tags: string[];
     status: EventResponseDto['status'];
+    visibility?: string;
+    isPrivate?: boolean;
+    isInternal?: boolean;
     organizerId: unknown;
     createdAt: Date;
     updatedAt: Date;

@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
+import { EVENT_CATEGORIES } from '../../shared/constants/event-category';
+import { EVENT_LIST_MAX_LIMIT } from '../../shared/constants/event-limit';
 import { EVENT_STATUSES } from '../../shared/constants/event-status';
 import { objectIdSchema } from './object-id.validator';
-
-const EVENT_CATEGORIES = ['Academic', 'Sports', 'Art and culture', 'Others'] as const;
 
 const posterSourceSchema = z
   .string()
@@ -99,7 +99,7 @@ export const listEventsSchema = z.object({
         return value === 'true';
       }),
     page: z.coerce.number().int().positive().default(1),
-    limit: z.coerce.number().int().positive().max(50).default(10),
+    limit: z.coerce.number().int().positive().max(EVENT_LIST_MAX_LIMIT).default(10),
   }),
 });
 

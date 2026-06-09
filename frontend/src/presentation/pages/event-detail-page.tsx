@@ -99,7 +99,7 @@ export const EventDetailPage = () => {
   const normalizedCategory = event ? normalizeEventCategory(event.category) : null;
 
   useEffect(() => {
-    if (!eventId || !token) return;
+    if (!eventId) return;
 
     let isMounted = true;
     let cleanupJoined: () => void = () => undefined;
@@ -117,6 +117,12 @@ export const EventDetailPage = () => {
         if (!isMounted) return;
 
         setEvent(eventDetail);
+
+        if (!token) {
+          setRoomState(null);
+          return;
+        }
+
         eventRoomService.connect(token);
 
         cleanupJoined = eventRoomService.onEventJoined((payload) => {
@@ -168,7 +174,9 @@ export const EventDetailPage = () => {
 
     return () => {
       isMounted = false;
-      eventRoomService.leaveRoom(eventId);
+      if (token) {
+        eventRoomService.leaveRoom(eventId);
+      }
       cleanupJoined();
       cleanupRsvp();
       cleanupMessage();
@@ -176,21 +184,8 @@ export const EventDetailPage = () => {
     };
   }, [eventId, token]);
 
-  useEffect(() => {
-    if (!import.meta.env.DEV) return;
-
-    console.debug('[EventSync] Event chat permission', {
-      currentUserId: user?.id ?? null,
-      currentUserRole: user?.role ?? null,
-      eventOrganizerId: event?.organizer.id ?? null,
-      isAttending,
-      roomCanChat: roomState?.canChat ?? null,
-      canSendMessages,
-    });
-  }, [canSendMessages, event?.organizer.id, isAttending, roomState?.canChat, user?.id, user?.role]);
-
   const handleToggleRsvp = async () => {
-    if (!eventId || !event || isOwnerOrganizer || isAdmin) return;
+    if (!eventId || !event || !user || isOwnerOrganizer || isAdmin) return;
 
     const nextIsAttending = !isAttending;
     const previousAttendeeCount = event.attendeeCount;
@@ -493,13 +488,29 @@ export const EventDetailPage = () => {
 
       {/* ─── Live room + sidebar ──────────────────────────────── */}
       <div className="grid gap-6 xl:grid-cols-[0.72fr_0.28fr]">
-        <ChatPanel
-          currentUserId={user?.id ?? null}
-          messages={roomState?.messages ?? []}
-          canChat={canSendMessages}
-          isSending={isSendingMessage}
-          onSend={handleSendMessage}
-        />
+        {user ? (
+          <ChatPanel
+            currentUserId={user.id}
+            messages={roomState?.messages ?? []}
+            canChat={canSendMessages}
+            isSending={isSendingMessage}
+            onSend={handleSendMessage}
+          />
+        ) : (
+          <section className="rounded-[2rem] border border-white/60 bg-white/85 p-6 shadow-panel backdrop-blur">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-brand-700">Event room</p>
+            <h2 className="mt-2 text-2xl font-bold text-ink">Sign in to join the conversation</h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+              Public event details are available now. Sign in to RSVP, join attendee chat, and receive live room updates.
+            </p>
+            <Link
+              to={APP_ROUTES.LOGIN}
+              className="mt-5 inline-flex rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-400"
+            >
+              Sign in to participate
+            </Link>
+          </section>
+        )}
 
         <div className="space-y-5">
           {/* Status control (organizer only) */}
@@ -535,13 +546,14 @@ export const EventDetailPage = () => {
           ) : null}
 
           <AttendeeCounter isLive={Boolean(roomState)} />
-          <RsvpActionCard
-            isPrivilegedUser={Boolean(isOwnerOrganizer || isAdmin)}
-            isAdmin={Boolean(isAdmin)}
-            isAttending={Boolean(isAttending)}
-            isBusy={isRsvpSaving}
-            onToggleRsvp={handleToggleRsvp}
-          />
+          {user ? (
+            <RsvpActionCard
+              isOrganizer={Boolean(isOwnerOrganizer || isAdmin)}
+              isAttending={Boolean(isAttending)}
+              isBusy={isRsvpSaving}
+              onToggleRsvp={handleToggleRsvp}
+            />
+          ) : null}
         </div>
       </div>
 

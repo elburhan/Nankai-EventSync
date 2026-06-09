@@ -19,6 +19,22 @@ export class RsvpService {
       throw new AppError('Event not found.', HTTP_STATUS.NOT_FOUND);
     }
 
+    this.assertEventAcceptsRsvps(event);
+
+    const existingRsvp = await this.rsvpRepository.findByEventAndUser(eventId, user.id);
+
+    if (existingRsvp?.status === 'going') {
+      return {
+        eventId,
+        attendeeCount: event.attendeeCount,
+        status: 'going',
+      };
+    }
+
+    if (typeof event.capacity === 'number' && event.attendeeCount >= event.capacity) {
+      throw new AppError('This event is already at full capacity.', HTTP_STATUS.CONFLICT);
+    }
+
     await this.rsvpRepository.createOrUpdateGoing(eventId, user.id);
 
     const attendeeCount = await this.syncAttendeeCount(eventId);
@@ -62,5 +78,18 @@ export class RsvpService {
     const attendeeCount = await this.rsvpRepository.countGoingByEventId(eventId);
     await this.eventRepository.setAttendeeCount(eventId, attendeeCount);
     return attendeeCount;
+  }
+
+  private assertEventAcceptsRsvps(event: {
+    status: string;
+    startAt: Date;
+  }): void {
+    if (event.status !== 'published') {
+      throw new AppError('RSVP is only available for published events.', HTTP_STATUS.BAD_REQUEST);
+    }
+
+    if (event.startAt.getTime() < Date.now()) {
+      throw new AppError('RSVP is closed for past events.', HTTP_STATUS.BAD_REQUEST);
+    }
   }
 }
